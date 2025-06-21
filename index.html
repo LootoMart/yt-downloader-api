@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>YouTube Downloader</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen flex items-center justify-center p-6">
+  <div class="w-full max-w-2xl space-y-6">
+    <div class="flex justify-between items-center">
+      <h1 class="text-3xl font-bold">🎬 YouTube Downloader</h1>
+      <button id="toggleTheme" class="px-4 py-1 rounded bg-red-600 text-white">Theme</button>
+    </div>
+
+    <input id="videoUrl" type="text" placeholder="Paste YouTube link..." class="w-full p-3 border rounded bg-gray-100 dark:bg-gray-800"/>
+
+    <button onclick="fetchMetadata()" class="w-full bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">Fetch Video</button>
+
+    <div id="videoInfo" class="hidden space-y-4 border p-4 rounded bg-gray-50 dark:bg-gray-800">
+      <div class="flex items-center space-x-4">
+        <img id="thumbnail" class="w-32 h-20 object-cover rounded" />
+        <div>
+          <h2 id="title" class="text-xl font-semibold"></h2>
+          <p id="channel" class="text-sm text-gray-500 dark:text-gray-300"></p>
+          <p id="duration" class="text-sm text-gray-500 dark:text-gray-300"></p>
+        </div>
+      </div>
+
+      <div class="flex flex-col md:flex-row gap-4">
+        <select id="formatSelect" class="p-2 w-full bg-white dark:bg-gray-700 border rounded"></select>
+        <button onclick="downloadVideo()" class="w-full md:w-auto bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">Download</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "https://YOUR-BACKEND-URL.onrender.com";
+
+    document.getElementById("toggleTheme").onclick = () => {
+      document.documentElement.classList.toggle("dark");
+    };
+
+    async function fetchMetadata() {
+      const url = document.getElementById("videoUrl").value.trim();
+      if (!url) return alert("Please paste a YouTube video link.");
+
+      const response = await fetch(`${API_BASE}/fetch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await response.json();
+      if (!data || !data.title) return alert("Invalid response!");
+
+      document.getElementById("videoInfo").classList.remove("hidden");
+      document.getElementById("thumbnail").src = data.thumbnail;
+      document.getElementById("title").innerText = data.title;
+      document.getElementById("channel").innerText = "By " + data.channel;
+      document.getElementById("duration").innerText = "Duration: " + data.duration;
+
+      const select = document.getElementById("formatSelect");
+      select.innerHTML = "";
+      data.formats.forEach(f => {
+        const option = document.createElement("option");
+        option.value = f.format_id;
+        option.text = `${f.ext.toUpperCase()} - ${f.resolution || 'Audio'} (${f.filesize_mb} MB)`;
+        select.appendChild(option);
+      });
+
+      window.videoUrl = url;
+    }
+
+    function downloadVideo() {
+      const formatId = document.getElementById("formatSelect").value;
+      if (!formatId) return alert("Please select a format.");
+      const downloadUrl = `${API_BASE}/download?url=${encodeURIComponent(window.videoUrl)}&format_id=${formatId}`;
+      window.open(downloadUrl, "_blank");
+    }
+  </script>
+</body>
+</html>
